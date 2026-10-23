@@ -60,6 +60,12 @@ export default defineConfig(({ mode }) => {
   if (env.NVIDIA_API_KEY) {
     process.env.NVIDIA_API_KEY = env.NVIDIA_API_KEY;
   }
+  if (env.AZURE_CV_ENDPOINT) {
+    process.env.AZURE_CV_ENDPOINT = env.AZURE_CV_ENDPOINT;
+  }
+  if (env.AZURE_CV_KEY) {
+    process.env.AZURE_CV_KEY = env.AZURE_CV_KEY;
+  }
 
   return {
     optimizeDeps: {

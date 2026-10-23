@@ -18,7 +18,7 @@ export default function Hero({ onUploadClick }) {
         {/* Badge */}
         <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-blue-100/80 border border-blue-200 text-blue-700 text-xs sm:text-sm font-semibold mb-6 shadow-sm">
           <span className="flex h-2 w-2 rounded-full bg-blue-600 animate-pulse" />
-          Powered by Gemini Vision Intelligence
+          Gemini Vision + Azure AI Vision OCR
         </div>
 
         {/* Headline */}

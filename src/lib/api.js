@@ -1,5 +1,5 @@
-/**
- * Client API for calling MedScript Analyzer Netlify function
+﻿/**
+ * Client API for MedScript Analyzer Netlify function
  */
 export async function analyzePrescription(base64Image, mimeType) {
   const controller = new AbortController();
@@ -8,13 +8,8 @@ export async function analyzePrescription(base64Image, mimeType) {
   try {
     const response = await fetch('/.netlify/functions/analyze', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        image: base64Image,
-        mimeType: mimeType
-      }),
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ image: base64Image, mimeType }),
       signal: controller.signal
     });
 
@@ -25,31 +20,19 @@ export async function analyzePrescription(base64Image, mimeType) {
     });
 
     if (!response.ok) {
-      if (response.status === 429) {
-        throw new Error('Analysis request limit reached. Please wait a minute and try again.');
-      }
-      if (response.status === 422 || data.error === 'not_prescription') {
-        throw new Error(data.message || 'This image does not look like a clear medical prescription. Please provide a clear, well-lit photo.');
-      }
-      if (response.status === 504) {
-        throw new Error('Analysis timed out. Please check your internet connection or upload a smaller, clearer file.');
-      }
+      if (response.status === 429) throw new Error('Analysis request limit reached. Please wait a minute and try again.');
+      if (response.status === 422 || data.error === 'not_prescription') throw new Error(data.message || 'This image does not look like a clear medical prescription.');
+      if (response.status === 504) throw new Error('Analysis timed out. Please check your connection or upload a clearer file.');
       throw new Error(data.error || data.message || `Analysis failed (${response.status}). Please try again.`);
     }
 
-    if (!data || !data.data) {
-      throw new Error('Received incomplete prescription analysis from the server.');
-    }
+    if (!data || !data.data) throw new Error('Received incomplete prescription analysis from the server.');
 
     return data.data;
   } catch (error) {
     clearTimeout(timeoutId);
-    if (error.name === 'AbortError') {
-      throw new Error('Request timed out after 60 seconds. Please try again with a clearer or smaller image.');
-    }
-    if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
-      throw new Error('Network error: Unable to connect to the analysis service. Please check your connection.');
-    }
+    if (error.name === 'AbortError') throw new Error('Request timed out after 60 seconds. Please try again with a clearer or smaller image.');
+    if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) throw new Error('Network error: Unable to connect to the analysis service. Please check your connection.');
     throw error;
   }
 }
