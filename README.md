@@ -1,544 +1,363 @@
-::: {align="center"}
-# MedScript Analyzer
+# MedScript Analyzer — AI-Powered Medical Prescription Analyzer
 
-### AI-Assisted Medical Prescription Text Extraction
+An AI-powered web application that reads medical prescription images and PDFs, extracts structured medicine information, and provides audio explanations — with optional **Microsoft Azure AI Vision** OCR enhancement.
 
-Turn prescription images into structured, easier-to-review text with
-OCR, vision-based AI analysis, image enhancement, audio explanations,
-and PDF export.
+> Built as a portfolio project demonstrating computer vision, OCR, image preprocessing, and AI-assisted text extraction concepts from the Microsoft Azure AI Vision Coursera course.
 
-```{=html}
-<p>
+![React](https://img.shields.io/badge/React-18-61DAFB?style=for-the-badge&logo=react)
+![Vite](https://img.shields.io/badge/Vite-7-646CFF?style=for-the-badge&logo=vite)
+![TailwindCSS](https://img.shields.io/badge/TailwindCSS-4-38BDF8?style=for-the-badge&logo=tailwindcss)
+![Netlify](https://img.shields.io/badge/Deploy-Netlify-00C7B7?style=for-the-badge&logo=netlify)
+![Azure](https://img.shields.io/badge/Azure%20AI%20Vision-Optional-0078D4?style=for-the-badge&logo=microsoftazure)
+
+---
+
+## Features
+
+### Core (Always Available)
+- Upload prescriptions as JPG, JPEG, PNG, WEBP, or PDF (up to 10 MB)
+- Drag-and-drop file upload with instant image preview
+- AI-powered prescription analysis via Google Gemini Vision API
+- Structured output: patient info, doctor info, medicines, dosage, frequency, timing, duration
+- Drug interaction warnings and side effect information
+- Unclear/illegible field detection — never invents medicine names
+- Audio explanation via browser Web Speech API (text-to-speech)
+- Copy extracted text to clipboard
+- Download analysis as a PDF report
+- Rate limiting (10 requests per IP per minute)
+- **Demo mode** when no API keys are configured (clearly labelled synthetic data)
+
+### Computer Vision Enhancements (New)
+- **Azure AI Vision Read OCR** (optional): Pre-extracts raw text from images using Microsoft's handwriting-capable OCR before sending to AI analysis
+- **Client-side image preprocessing**: contrast enhancement, grayscale conversion, auto-resize, unsharp mask sharpening
+- Original vs. Enhanced image preview toggle
+- Raw OCR text panel with copy button (when Azure is configured)
+- Processing pipeline badge showing which AI services were used
+
+### Safety & Privacy
+- All API keys are server-side only — never exposed to the browser
+- Prescription images processed in memory only; nothing stored or logged
+- Clear medical disclaimer on all results
+- OCR limitation notice explaining AI accuracy constraints
+- Demo mode clearly labelled to prevent confusion with real results
+
+---
+
+## Architecture
+
 ```
-`<img src="https://img.shields.io/badge/React-18-61DAFB?style=for-the-badge&logo=react&logoColor=black" alt="React 18">`{=html}
-`<img src="https://img.shields.io/badge/Vite-7-646CFF?style=for-the-badge&logo=vite&logoColor=white" alt="Vite">`{=html}
-`<img src="https://img.shields.io/badge/Tailwind_CSS-4-06B6D4?style=for-the-badge&logo=tailwindcss&logoColor=white" alt="Tailwind CSS">`{=html}
-`<img src="https://img.shields.io/badge/Netlify-Functions-00C7B7?style=for-the-badge&logo=netlify&logoColor=white" alt="Netlify">`{=html}
-`<img src="https://img.shields.io/badge/AI-Gemini-4285F4?style=for-the-badge&logo=googlegemini&logoColor=white" alt="Google Gemini">`{=html}
-```{=html}
-</p>
+┌─────────────────────────────────────────────────────────┐
+│                  Browser (React + Vite)                  │
+│                                                          │
+│  UploadBox → imagePreprocess.js → api.js                 │
+│     ↓              ↓                ↓                    │
+│  File select   Canvas API      fetch POST                │
+│  Drag-drop     Enhance/resize  base64 image              │
+└─────────────────────────────────────────────────────────┘
+                          ↓
+┌─────────────────────────────────────────────────────────┐
+│           Netlify Serverless Function (Node.js)          │
+│                netlify/functions/analyze.js               │
+│                                                          │
+│  1. [Optional] Azure AI Vision Read OCR                  │
+│     POST /computervision/imageanalysis:analyze           │
+│     → Extracts raw printed + handwritten text            │
+│                                                          │
+│  2. Google Gemini Vision API (primary AI)                │
+│     gemini-2.0-flash → gemini-1.5-flash → gemini-1.5-pro│
+│     OR NVIDIA NIM (meta/llama-3.2-vision)                │
+│     → Structured prescription JSON analysis              │
+│                                                          │
+│  3. Demo mode (no API keys configured)                   │
+│     → Clearly-labelled synthetic example data            │
+└─────────────────────────────────────────────────────────┘
+                          ↓
+┌─────────────────────────────────────────────────────────┐
+│                  ResultView (React)                       │
+│                                                          │
+│  • Demo mode banner (if demo)                            │
+│  • Azure OCR badge + raw text panel (if Azure used)      │
+│  • Patient / Doctor cards                                │
+│  • Medicine cards (name, dose, frequency, timing, etc.)  │
+│  • Interactions, Precautions, Side Effects               │
+│  • Unclear fields warning                                │
+│  • Audio player (Web Speech API)                         │
+│  • Copy + Download PDF                                   │
+└─────────────────────────────────────────────────────────┘
 ```
-**Portfolio project** exploring computer vision, OCR, image
-preprocessing, structured AI extraction, and serverless deployment.
-:::\(!IMPORTANT\) Educational use only --- not medical advice. OCR
-and AI can misread medicine names, strengths, and instructions. Never
-use this application to make treatment decisions. Confirm every result
-with a qualified doctor or pharmacist.
 
-Table of contents
-- Overview
-- Features
-- How it works
-- Architecture
-- Technology stack
-- Project structure
-- Requirements
-- Run locally on Windows
-- Environment variables
-- Optional Azure OCR setup
-- Run and test
-- Deploy to Netlify
-- Troubleshooting
-- Security and privacy
-- Limitations
-- Future improvements
-- Learning outcomes
-- License
-Overview
-MedScript Analyzer is a web application designed to help users
-inspect text extracted from medical prescription images and supported
-PDF files. It combines image preprocessing, OCR where configured, and a
-vision-capable AI provider to organize readable information into a
-structured result.
+---
 
-The application is intended as a software engineering and AI learning
-project. It is not a validated clinical system, does not verify
-prescriptions, and cannot guarantee the correctness of extracted
-information.
-Project links
-- Live demo: Add your verified Netlify URL here.
-- Source code: Add your GitHub repository URL here.
-- Screenshots: Add genuine screenshots from your running
-  application in a docs/screenshots/ folder.
-Do not publish placeholder links as though they were real deployments.
-Features
-The list below describes the intended project capabilities from the
-current project documentation. Confirm each item against the code and
-provider configuration before representing it as production-ready.
-<details open>
-<summary>
-<strong>{=html}Upload and image preparation</strong>{=html}
-</summary>
-- Upload supported image files: JPG, JPEG, PNG, and WEBP.
-- PDF support depends on the configured analysis flow.
-- Drag-and-drop upload and image preview.
-- Client-side Canvas processing options, including contrast
-  adjustment, sharpening, grayscale conversion, and resizing, where
-  implemented.
-- Original/enhanced preview for visual comparison.
-- File-size and file-type validation.
-</details>
-<details>
-<summary>
-<strong>{=html}AI-assisted extraction</strong>{=html}
-</summary>
-- Vision-based analysis using a configured Google Gemini model.
-- Optional secondary provider support for NVIDIA NIM, if enabled in
-  the backend.
-- Structured fields for patient and prescriber details, medicines,
-  dosage, frequency, timing, duration, and instructions when legible.
-- Unclear or missing values should be marked as uncertain rather than
-  guessed.
-- Clearly labelled demo data when demo mode is enabled.
-</details>
-<details>
-<summary>
-<strong>{=html}Optional OCR enhancement</strong>{=html}
-</summary>
-- Optional Microsoft Azure AI Vision OCR integration.
-- Display of raw OCR text only when it was actually returned by the
-  OCR provider.
-- OCR-assisted analysis where supported by the configured endpoint and
-  file type.
-- A fallback path when OCR is not configured or fails, provided the
-  backend implements it.
-OCR is not guaranteed to read handwritten medical instructions
-accurately. Always check the original prescription.
+## Tech Stack
 
-</details>
-<details>
-<summary>
-<strong>{=html}Review and export</strong>{=html}
-</summary>
-- Copy extracted text to the clipboard.
-- Browser-based text-to-speech using the Web Speech API, where
-  supported.
-- PDF report generation using jsPDF, where implemented.
-- Structured medicine and instruction cards.
-- Clear uncertainty notices and medical safety messaging.
-</details>
-How it works
-```mermaid
-flowchart TD
-    A[Select prescription image or supported PDF] --> B[Validate file]
-    B --> C{Image preprocessing enabled?}
-    C -- Yes --> D[Enhance image in browser]
-    C -- No --> E[Prepare original input]
-    D --> F[Send request to serverless function]
-    E --> F
-    F --> G{Azure OCR configured and supported?}
-    G -- Yes --> H[Run configured Azure OCR workflow]
-    G -- No --> I[Continue without Azure OCR]
-    H --> J[Send image and available OCR text to AI]
-    I --> J
-    J --> K[Validate and parse AI response]
-    K --> L[Display structured results and uncertainty]
-    L --> M[Review, copy, listen, or export]
+| Layer | Technology |
+|-------|-----------|
+| Frontend | React 18 + JSX |
+| Styling | Tailwind CSS v4 |
+| Bundler | Vite 7 |
+| AI Provider | Google Gemini API (gemini-2.0-flash) |
+| AI Provider 2 | NVIDIA NIM (meta/llama-3.2-vision, optional) |
+| OCR Layer | Microsoft Azure AI Vision Read API (optional) |
+| Image Preprocessing | Browser Canvas API (built-in) |
+| Backend | Netlify Serverless Functions |
+| PDF Export | jsPDF |
+| TTS | Web Speech API (browser built-in) |
+| Deployment | Netlify |
+
+---
+
+## Getting Started (Windows)
+
+### Prerequisites
+- Node.js 18 or higher (`node --version`)
+- A Google Gemini API key (free at https://aistudio.google.com/app/apikey)
+- Optional: Azure subscription for Azure AI Vision OCR
+
+### Installation
+
+```powershell
+# 1. Navigate to project directory
+cd "c:\Users\ASUS\Desktop\medical prescription analyzer"
+
+# 2. Install dependencies
+npm install
+
+# 3. Copy environment template
+copy .env.example .env
+
+# 4. Edit .env with your API keys (see Environment Variables section)
+notepad .env
+
+# 5. Start development server
+npm run dev
 ```
-The diagram represents the intended workflow. Exact behavior depends on
-the code and environment variables configured in your deployment.
-Architecture
-```mermaid
-flowchart LR
-    subgraph Client["Browser — React + Vite"]
-        A[UploadBox]
-        B[Image preprocessing]
-        C[API client]
-        D[ResultView]
-        E[Audio and PDF utilities]
-        A --> B --> C
-        D --> E
-    end
 
-    subgraph Server["Netlify Functions"]
-        F[Request validation]
-        G[Optional OCR provider]
-        H[AI analysis provider]
-        I[Response validation]
-        F --> G --> H --> I
-    end
+Open your browser at: **http://127.0.0.1:5173**
 
-    C --> F
-    I --> D
+> The Vite dev server includes a built-in middleware that proxies `/.netlify/functions/analyze` to the local serverless function handler, so you do NOT need Netlify CLI for local development.
+
+---
+
+## Environment Variables
+
+Edit `.env` in the project root (never commit this file!):
+
+```env
+# Required: Primary AI Provider
+# Get a free key at: https://aistudio.google.com/app/apikey
+GEMINI_API_KEY=your_gemini_api_key_here
+
+# Optional: NVIDIA NIM (secondary AI provider)
+# Get at: https://developer.nvidia.com/nim
+NVIDIA_API_KEY=
+
+# Optional: Azure AI Vision (OCR enhancement layer)
+# Get from Azure Portal > AI Services > Computer Vision > Keys and Endpoint
+AZURE_CV_ENDPOINT=https://your-resource.cognitiveservices.azure.com/
+AZURE_CV_KEY=your_azure_key_here
 ```
-Data flow
-1. The user selects a file and reviews its preview.
-2. Optional preprocessing runs in the browser.
-3. The frontend sends the analysis request to a serverless function.
-4. If configured and supported, the backend runs OCR and passes the
-   available text to the AI analysis stage.
-5. The backend validates the provider response and returns structured
-   results.
-6. The frontend displays the result and offers supported review/export
-   controls.
-Keep API credentials on the server. Do not put secret keys in Vite
-variables prefixed with VITE_, because those values can be included in
-the client bundle.
-Technology stack
-  Layer                   Technology              Purpose
-  Frontend                React 18                Component-based UI
 
-  Build tool              Vite                    Development server and
-                                                  production build
+### What Happens Without Each Key
 
-  Styling                 Tailwind CSS 4          Responsive styling
+| Key | Without it |
+|-----|-----------|
+| `GEMINI_API_KEY` | Demo mode activates — synthetic example data shown |
+| `NVIDIA_API_KEY` | Gemini is used (no NVIDIA fallback) |
+| `AZURE_CV_ENDPOINT` + `AZURE_CV_KEY` | Azure OCR step is skipped; Gemini analyzes image directly |
 
-  Backend                 Netlify Functions /     Server-side API
-                          Node.js                 requests
+---
 
-  Primary AI              Google Gemini API       Vision-based
-                                                  extraction, if
-                                                  configured
+## Azure AI Vision Setup (Optional OCR Enhancement)
 
-  Optional OCR            Microsoft Azure AI      OCR preprocessing, if
-                          Vision                  configured
+Azure AI Vision Read API can extract both **printed and handwritten** text from images before Gemini analyzes it. This improves accuracy on handwritten prescriptions.
 
-  Optional AI provider    NVIDIA NIM              Alternative provider,
-                                                  if implemented and
-                                                  configured
+### Steps to Configure
+1. Create a free Azure account at https://azure.microsoft.com/free/
+2. In the Azure Portal, create a resource: **AI Services** or **Computer Vision**
+3. Go to **Keys and Endpoint** in your resource
+4. Copy the **Endpoint** (e.g., `https://myresource.cognitiveservices.azure.com/`)
+5. Copy **Key 1** or **Key 2**
+6. Add both to your `.env` file
 
-  Image processing        Browser Canvas API      Client-side image
-                                                  enhancement
+### What Azure OCR Does
+- Calls the **Azure Computer Vision Image Analysis v4 API** (`imageanalysis:analyze` with `features=read`)
+- Extracts all text including handwritten content into structured line-by-line output
+- This raw text is sent alongside the image to Gemini for richer analysis
+- If Azure OCR fails or is not configured, the app falls back to image-only analysis (no error shown to user)
+- The raw extracted text is shown in the results panel so you can verify OCR accuracy
 
-  PDF export              jsPDF                   Client-generated
-                                                  report, if implemented
+### Handwriting Limitation Note
+> Azure AI Vision OCR can read handwriting, but medical handwriting is often highly stylised and abbreviated. OCR accuracy on handwritten prescriptions varies significantly by image quality, lighting, and writing style. Always verify extracted medicine names and dosages with your doctor or pharmacist.
 
-  Audio                   Web Speech API          Browser text-to-speech
+---
 
-  Hosting                 Netlify                 Static hosting and
-                                              serverless functions
-Use the versions in package.json as the source of truth if they differ
-from this overview.
-Project structure
+## Image Preprocessing
+
+Client-side preprocessing runs in the browser before uploading to the AI:
+
+| Technique | Default | Effect |
+|-----------|---------|--------|
+| Contrast enhancement | ON | Boosts text contrast using S-curve, +10 brightness lift |
+| Unsharp mask (sharpening) | ON | Sharpens text edges using blur-subtract technique |
+| Auto-resize | ON | Downscales images larger than 2048px to reduce upload size |
+| Grayscale conversion | OFF | Converts to luminance-weighted grayscale (useful for colorful backgrounds) |
+
+You can toggle each option in the upload panel. A before/after preview toggle is available.
+
+---
+
+## Project Structure
+
+```
 medical-prescription-analyzer/
 ├── netlify/
 │   └── functions/
-│       └── analyze.js
+│       └── analyze.js           # Serverless backend: Azure OCR + Gemini/NVIDIA AI
 ├── samples/
+│   ├── prescription_antibiotic.jpg
+│   ├── prescription_cardiology.jpg
+│   └── prescription_diabetes.jpg
 ├── src/
 │   ├── components/
-│   │   ├── AudioPlayer.jsx
-│   │   ├── Disclaimer.jsx
+│   │   ├── AudioPlayer.jsx      # Web Speech API TTS player
+│   │   ├── Disclaimer.jsx       # Medical disclaimer banner
 │   │   ├── Footer.jsx
 │   │   ├── Header.jsx
-│   │   ├── Hero.jsx
+│   │   ├── Hero.jsx             # Landing hero section
 │   │   ├── HowItWorks.jsx
 │   │   ├── Loader.jsx
-│   │   ├── MedicineCard.jsx
-│   │   ├── ResultView.jsx
-│   │   └── UploadBox.jsx
+│   │   ├── MedicineCard.jsx     # Individual medicine detail card
+│   │   ├── ResultView.jsx       # Analysis results + OCR text panel
+│   │   └── UploadBox.jsx        # Upload + preprocessing controls
 │   ├── lib/
-│   │   ├── api.js
-│   │   ├── imagePreprocess.js
-│   │   └── pdf.js
+│   │   ├── api.js               # Frontend fetch client
+│   │   ├── imagePreprocess.js   # Canvas API preprocessing utilities
+│   │   └── pdf.js               # jsPDF report generator
 │   ├── App.jsx
 │   ├── index.css
 │   └── main.jsx
-├── .env.example
+├── .env                         # Your secrets (gitignored)
+├── .env.example                 # Safe template to commit
 ├── .gitignore
 ├── index.html
 ├── netlify.toml
 ├── package.json
-└── vite.config.js
-This is the documented target structure. If your current repository
-differs, update this tree to match the files that actually exist.
-Requirements
-- Windows 10/11, macOS, or Linux.
-- Node.js version supported by the installed Vite and project
-  dependencies. Check package.json; use a currently supported
-  Node.js LTS release.
-- npm.
-- A Google Gemini API key for real AI analysis, if Gemini is the
-  configured provider.
-- Optional Azure AI Vision credentials for OCR, if that integration is
-  implemented.
-- Optional NVIDIA NIM credentials, if that provider is implemented.
-Run locally on Windows
-Open PowerShell or Command Prompt:
-cd "C:\Users\ASUS\Desktop\medical prescription analyzer"
+└── vite.config.js               # Vite + Tailwind + local function proxy
+```
 
-# Install dependencies
-npm install
+---
 
-# Create the local environment file
-Copy-Item .env.example .env
+## Testing Instructions
 
-# Edit environment variables
-notepad .env
-
-# Start the development server
+### Quick Test (No API Keys Needed)
+```powershell
 npm run dev
-Open the local URL printed by Vite, commonly http://localhost:5173.
+# Open http://127.0.0.1:5173
+# Upload any of the sample images from /samples/
+# You will see Demo Mode results (clearly labelled)
+```
 
-The project may proxy the Netlify function locally through
-vite.config.js. Confirm that this middleware exists and is enabled. If
-it does not, use the development method documented by your actual
-configuration rather than assuming the function endpoint will work
-automatically.
+### Test With Real AI Analysis
+```powershell
+# Add GEMINI_API_KEY to .env, then:
+npm run dev
+# Upload samples/prescription_antibiotic.jpg
+# Should return real structured prescription data
+```
 
-To create a production build:
-npm run build
-Run linting or tests only if corresponding scripts exist in
-package.json:
-npm run
-This lists the scripts available in the project.
-Environment variables
-Create a local .env file from .env.example. Use empty values for
-integrations you are not enabling.
-# Server-side secret — required for real Gemini analysis
-GEMINI_API_KEY=
+### Test Scenarios
 
-# Optional alternative AI provider, if implemented
-NVIDIA_API_KEY=
+| Scenario | Expected Behaviour |
+|----------|-------------------|
+| Valid prescription image | Structured results with medicines, dosages |
+| Blurry/low-quality image | Results with more `unclear` fields |
+| Non-prescription image | Error: "does not appear to be a legible prescription" |
+| PDF upload | Analysis (no preview thumbnail) |
+| File > 10 MB | Client-side validation error |
+| Wrong file type (.docx etc.) | Client-side validation error |
+| No API keys | Demo mode results with amber banner |
+| Azure configured | Blue OCR badge + raw text panel in results |
+| Rate limit exceeded | 429 error with retry message |
 
-# Optional Azure OCR integration, if implemented
-AZURE_CV_ENDPOINT=
-AZURE_CV_KEY=
-  Variable                Purpose                 Required?
-  GEMINI_API_KEY        Authenticates Gemini    For real Gemini
-                          requests from the       analysis
-                          server                  
+---
 
-  NVIDIA_API_KEY        Authenticates NVIDIA    Only if using NVIDIA
-                          NIM requests            
+## Deployment (Netlify)
 
-  AZURE_CV_ENDPOINT     Azure resource endpoint Only if using Azure OCR
-  AZURE_CV_KEY          Azure resource key      Only if using Azure OCR
-Credential safety checklist
-- Keep .env out of Git.
-- Commit .env.example with blank values only.
-- Never paste API keys into source code, README files, screenshots, or
-  public issues.
-- Configure production secrets in Netlify's environment-variable
-  settings.
-- If a key was ever committed or shared, revoke/rotate it immediately;
-  deleting the visible copy alone is not enough.
-- Do not assume a provider is free or that usage is unlimited. Check
-  its current pricing, quotas, and eligibility before use.
-Optional Azure OCR setup
-Azure OCR is an optional enhancement, not a prerequisite for the
-frontend or for other configured AI analysis paths.
-1. Sign in to the Azure portal.
-2. Create or select an Azure AI Vision resource that supports the OCR
-   API you intend to use.
-3. Open the resource's Keys and Endpoint page.
-4. Copy the endpoint and a key into your local .env file.
-5. Verify the exact OCR API, API version, endpoint path, authentication
-   header, request payload, and response schema against the official
-   documentation for that resource.
-6. Test a non-sensitive sample image before using any real document.
-7. Confirm the UI reports Azure OCR as used only when the OCR request
-   succeeds.
-Important API distinction: Azure's Read OCR workflow and Image
-Analysis APIs can have different endpoints, request formats, response
-formats, and operation-status behavior. Do not describe an asynchronous
-Read API as a synchronous Image Analysis call. Implement and document
-the API workflow that the source code actually uses. PDF support must be
-verified separately; do not assume an image OCR endpoint accepts PDF
-files.
+1. Push this repository to GitHub
+2. Connect the repo to https://netlify.com
+3. Set environment variables in Netlify dashboard:
+   - `GEMINI_API_KEY` (required)
+   - `NVIDIA_API_KEY` (optional)
+   - `AZURE_CV_ENDPOINT` (optional)
+   - `AZURE_CV_KEY` (optional)
+4. Build settings (already in `netlify.toml`):
+   - **Build command:** `npm run build`
+   - **Publish directory:** `dist`
+   - **Functions directory:** `netlify/functions`
 
-Official starting points:
-- Azure AI Vision
-  documentation
-- Azure AI Vision OCR
-  documentation
-Run and test
-Use synthetic or deliberately non-sensitive sample documents for
-development.
-  Scenario                            Expected behavior to verify
-  Clear prescription image            Extract legible fields and mark
-                                      uncertainty appropriately
+---
 
-  Blurry or low-resolution image      Avoid guessing; identify unclear
-                                      fields where possible
+## Known Limitations
 
-  Non-prescription image              Return a clear validation or
-                                      analysis message
+1. **Handwritten prescriptions**: OCR accuracy on doctor handwriting is inherently limited. Azure AI Vision improves this but cannot guarantee perfect extraction.
+2. **PDF support**: PDFs are sent to Gemini directly. Multi-page PDFs may only have the first page analysed.
+3. **File size**: Maximum 10 MB. Large high-res photos should be auto-resized by preprocessing.
+4. **Rate limiting**: 10 requests per IP per minute (in-memory, resets on server restart).
+5. **Gemini model availability**: Falls through `gemini-2.0-flash → gemini-1.5-flash → gemini-1.5-pro` on model errors.
+6. **Azure OCR for PDFs**: Azure Image Analysis API v4 does not support PDFs — PDF uploads skip the Azure OCR step.
+7. **No persistent storage**: Results are not saved anywhere. Download the PDF if you need a record.
 
-  Unsupported file type               Reject it with a useful error
+---
 
-  File over configured size limit     Reject it on both client and server
+## Medical Safety & Privacy
 
-  Missing AI credentials              Show a clearly labelled demo state
-                                      or configuration error, depending
-                                      on implementation
+> **IMPORTANT DISCLAIMER**
 
-  Invalid AI credentials              Show a useful error; do not
-                                      silently return synthetic data
+This application is an **information extraction and assistance tool only**. It is NOT a medical diagnosis system.
 
-  Azure credentials absent            Continue without Azure OCR if the
-                                      configured fallback supports it
+- Do NOT change, start, or stop any medication based solely on AI output
+- Always verify extracted medicine names, dosages, and instructions with a **qualified healthcare professional** or licensed pharmacist
+- OCR and AI systems can make errors, especially with handwritten or unclear text
+- Prescription images are processed in server memory only and are **never stored, logged, or retained**
+- API keys are never exposed to the frontend or committed to Git
+- No personal health information is logged by this application
 
-  Azure OCR failure                   Report that OCR was unavailable and
-                                      describe any actual fallback
+---
 
-  Malformed provider response         Handle safely without crashing the
-                                      UI
+## What Was Improved (vs Original Project)
 
-  Provider timeout or rate limit      Display a recoverable error and
-                                      avoid unsafe automatic retries
+| Area | Original | After Improvement |
+|------|----------|------------------|
+| Gemini model names | `gemini-3.5-flash`, `gemini-3.6-flash` (non-existent) | `gemini-2.0-flash`, `gemini-1.5-flash`, `gemini-1.5-pro` (correct) |
+| Azure AI Vision OCR | Not present | Integrated as optional pre-processing step |
+| Image preprocessing | Not present | Canvas API: contrast, grayscale, resize, sharpening |
+| Demo mode | Returns 500 error when no keys | Clearly-labelled synthetic demo results |
+| Preprocessing UI | Not present | Toggle controls + before/after preview |
+| OCR raw text | Not shown | Expandable panel with copy button (when Azure used) |
+| Error messages | Generic | API_KEY_INVALID, safety filter, model 404 all handled |
+| .env.example | Only Gemini key | All 4 keys with setup instructions |
+| README | Basic | Comprehensive architecture, Azure setup, testing guide |
+| Safety filter detection | Not handled | Detected and shows user-friendly message |
 
-  Audio unavailable in browser        Keep text results usable and
-                                      explain that audio is unsupported
+---
 
-  PDF export                          Verify that the downloaded report
-                                      contains the correct current result
+## What Requires API Credentials
 
-  Multiple rapid requests             Verify rate limiting and
-                                  request-state handling
-These are test cases, not claims that the tests have already passed.
-Record actual results after running them.
-Deploy to Netlify
-1. Push the project to a Git repository.
-2. Import the repository into Netlify.
-3. Check the project's netlify.toml configuration.
-4. Configure the build command and publish directory to match the
-   project:
-   - Build command: npm run build
-   - Publish directory: dist
-   - Functions directory: netlify/functions (if configured this
-     way)
-5. Add the required server-side environment variables in Netlify.
-6. Deploy and inspect the function logs for errors. Do not log API keys
-   or prescription contents.
-7. Test the deployed site with a non-sensitive sample image.
-8. Confirm the live URL, production AI configuration, optional OCR
-   behavior, and error handling before adding a public demo link to
-   this README.
-Troubleshooting
-<details>
-<summary>
-<strong>{=html}The app shows demo data</strong>{=html}
-</summary>
-Check whether the serverless function can read GEMINI_API_KEY. Restart
-the local development server after changing .env. In production,
-configure the key in Netlify and redeploy if required by the platform.
+| Feature | Credential Needed |
+|---------|------------------|
+| Real prescription analysis | `GEMINI_API_KEY` |
+| NVIDIA vision model | `NVIDIA_API_KEY` |
+| Azure OCR pre-processing | `AZURE_CV_ENDPOINT` + `AZURE_CV_KEY` |
+| Demo mode, preprocessing, audio, PDF | None |
 
-Demo data must be visibly labelled and must never be confused with real
-prescription analysis.
-</details>
-<details>
-<summary>
-<strong>{=html}The analysis request fails</strong>{=html}
-</summary>
-Check the browser network panel and serverless function logs. Verify the
-provider key, model identifier, endpoint, request format, quotas, and
-supported input type. Redact sensitive values before sharing logs.
-</details>
-<details>
-<summary>
-<strong>{=html}Azure OCR does not run</strong>{=html}
-</summary>
-Verify both Azure environment variables, resource endpoint, key, API
-version, supported file format, and the exact OCR workflow implemented
-by the backend. Check whether the UI distinguishes "not configured,"
-"failed," and "successfully completed."
-</details>
-<details>
-<summary>
-<strong>{=html}The local function endpoint returns
-404</strong>{=html}
-</summary>
-Inspect vite.config.js, netlify.toml, and
-netlify/functions/analyze.js. The frontend development server does not
-automatically guarantee that Netlify functions are available locally.
-</details>
-<details>
-<summary>
-<strong>{=html}The production build fails</strong>{=html}
-</summary>
-Run npm install, inspect the first meaningful build error, and check
-Node.js compatibility with the installed dependencies. Do not suppress
-errors merely to make the build appear successful.
-</details>
-Security and privacy
-Prescription images can contain sensitive personal and health
-information.
-- Send API credentials only from server-side code.
-- Validate incoming requests and file limits on the server as well as
-  the client.
-- Avoid storing uploaded files or extracted text unless there is a
-  clear, documented need.
-- Do not log prescription images, OCR text, medicine lists, patient
-  details, or secret keys.
-- Verify actual retention and processing behavior across your
-  application, hosting platform, and AI/OCR providers before claiming
-  that data is never stored.
-- Tell users when content is transmitted to third-party providers.
-- Use non-sensitive sample documents for demonstrations and testing.
-- Provide clear error handling without returning internal stack traces
-  or secrets to the browser.
-Medical safety disclaimer
-MedScript Analyzer is an educational information-extraction project.
-It is not a substitute for a doctor, pharmacist, or other qualified
-healthcare professional.
-- OCR can misread handwriting, abbreviations, numbers, and medicine
-  names.
-- AI may omit details or generate incorrect information.
-- Drug interactions, contraindications, and side effects must not be
-  treated as clinically verified unless validated through an
-  appropriate, reliable clinical source and process.
-- Never start, stop, substitute, or change a medicine or dosage based
-  on this application's output.
-- Confirm all medicine names, strengths, doses, frequencies, and
-  durations against the original prescription with a qualified
-  healthcare professional.
-Limitations
-1. Handwriting: Accuracy varies with handwriting style, image
-   quality, lighting, and abbreviations.
-2. AI reliability: Structured output does not guarantee factual
-   correctness.
-3. PDFs: Supported PDF formats, page counts, and extraction
-   behavior depend on the actual provider integration.
-4. Provider availability: Models, API versions, quotas, and pricing
-   can change.
-5. Serverless limits: Request size, execution duration,
-   concurrency, and memory depend on the deployment platform and
-   configuration.
-6. Rate limiting: An in-memory counter may not reliably enforce a
-   global per-IP limit across multiple serverless instances or cold
-   starts.
-7. No assumed persistence: Describe data retention only after
-   verifying the behavior of the code and external providers.
-8. Browser features: Speech synthesis and some file capabilities
-   vary by browser and operating system.
-Future improvements
-- Add automated tests for file validation, AI response parsing, and
-  failure paths.
-- Add an accessible, step-by-step processing indicator tied to actual
-  backend states.
-- Improve keyboard navigation and screen-reader announcements.
-- Add a review workflow that lets users compare extracted fields with
-  the original document.
-- Integrate verified medicine information from a reliable,
-  appropriately licensed source instead of relying solely on
-  generative AI for safety information.
-- Add configurable retention controls only if secure storage is
-  intentionally introduced.
-- Add genuine application screenshots and a short demonstration video.
-- Add deployment and test-status badges only after the corresponding
-  workflows exist and pass.
-Learning outcomes
-This project can demonstrate practical experience with:
-- React component design and responsive interfaces.
-- File uploads and client-side image processing.
-- OCR and vision-model API integration.
-- Serverless backend functions and environment configuration.
-- Parsing and validating structured AI output.
-- Error handling, input validation, and secret management.
-- PDF generation and browser text-to-speech.
-- Responsible communication of uncertainty and AI limitations.
-The project was built as a portfolio exercise connected to learning
-about Microsoft Azure AI Vision. This description does not imply
-Microsoft endorsement or certification of the application.
-License
-This project is described as using the MIT License. Include a LICENSE
-file containing the MIT License text before presenting the repository as
-MIT-licensed.
-::: {align="center"}
-**Built for learning, experimentation, and responsible AI development.**
+---
 
-If you find a technical issue, please open a GitHub issue without
-uploading real prescriptions, personal health information, or API
-credentials.
-:::
+## License
+
+MIT License — free to use and modify.
+
+---
+
+## Disclaimer
+
+This app is for **informational and educational purposes only** and does not constitute medical advice. Always consult a licensed healthcare professional before making any medical decision.
